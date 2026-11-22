@@ -12,7 +12,7 @@ Copy-and-paste commands to check GL.iNet routers and KVMs for the malware from G
 
 | What | Link |
 | --- | --- |
-| Best Steps for recovery | https://github.com/RemoteToHome-io/gl-security-incident-2026#if-you-find-something |
+| Best Steps for recovery | https://github.com/RemoteToHome-io/gl-security-incident-2026 |
 | Official GL.iNet security notice | https://www.gl-inet.com/en-gb/blogs/blog/glinet-security-notice-2026-11-20 |
 | My blog post (full write-up) | https://blog.kltechvideos.co.uk/2026/11/22/gl-inet-security-incident-how-to-check-your-routers-and-kvms-for-malware/ |
 | Router firmware download centre | https://dl.gl-inet.com/ |
