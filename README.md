@@ -79,14 +79,41 @@ ps -aux | grep tmp
 On a Comet Q, change `ps -aux` to `ps -a`.
 
 ```sh
-ps -aux 2>/dev/null | grep '[c]rond -i /tmp/.log' && echo "!!! INDICATOR FOUND - INFECTED" || echo "OK: indicator not found"
+ps -aux 2>/dev/null | grep '[c]rond -i /tmp/.log' && echo "INDICATOR FOUND - INFECTED" || echo "OK: indicator not found"
 ```
+
+### ⚠️ KVM Toolbox terminal: the `!!` gotcha
+
+The KVM's Toolbox → Terminal → Access runs a **full bash shell**, unlike the BusyBox `ash` on the routers. Bash treats `!!` as history expansion, so an alert message containing `!!!` fails before the check even runs:
+
+```
+bash: !!: event not found
+```
+
+That error is **not** a sign of infection — the command just never ran. Two fixes:
+
+**Fix A — turn off history expansion first, then run the check** 🟢 Read-only
+
+```sh
+set +H
+ps -aux 2>/dev/null | grep '[c]rond -i /tmp/.log' && echo "INDICATOR FOUND - INFECTED" || echo "OK: indicator not found"
+```
+
+**Fix B — use the `!!`-free command above** 🟢 Read-only
+
+The **My enhanced command** box above already has the `!!!` removed, so it runs in the KVM Toolbox terminal as-is. On a Comet Q, change `ps -aux` to `ps -a`.
+
+Either way you'll get `OK: indicator not found` (clean) or the INFECTED line.
+
+> **Note:** the router commands run in BusyBox `ash`, which has no history expansion, so the `!!!` there is harmless. This gotcha only affects the KVM's bash terminal.
 
 ---
 
 ## 🧪 Advanced: full indicator check (`glcheck`)
 
 🟢 **Read-only.** Works on routers and KVMs. Paste the whole block over SSH.
+
+> **KVM Toolbox terminal:** run `set +H` once before pasting this block, so bash doesn't choke on the `!!!` inside the `flag` messages.
 
 Checks for:
 
@@ -165,7 +192,7 @@ GL.iNet **hasn't** published any IP addresses or domains to block. One range is 
 🟢 **Read-only.** Run on a GL.iNet router over SSH.
 
 ```sh
-grep '170\.39\.226\.' /proc/net/nf_conntrack 2>/dev/null && echo "!!! CONNECTION TO SUSPECT RANGE FOUND" || echo "OK: no current connections to 170.39.226.0/24"
+grep '170\.39\.226\.' /proc/net/nf_conntrack 2>/dev/null && echo "CONNECTION TO SUSPECT RANGE FOUND" || echo "OK: no current connections to 170.39.226.0/24"
 ```
 
 This searches the router's connection-tracking table, which lists every connection going through or from the router right now. It deliberately avoids `netstat`, because community analysis found the malware can replace `netstat` with a fake. The connection table comes straight from the kernel, so it's much harder to fake.
