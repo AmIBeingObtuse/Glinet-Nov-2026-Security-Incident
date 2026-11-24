@@ -13,12 +13,39 @@ Copy-and-paste commands to check GL.iNet routers and KVMs for the malware from G
 | What | Link |
 | --- | --- |
 | Best Steps for recovery | https://github.com/RemoteToHome-io/gl-security-incident-2026 |
-| Official GL.iNet security notice | https://www.gl-inet.com/en-gb/blogs/blog/glinet-security-notice-2026-11-20 |
+| Official GL.iNet security notice (updated 23 Nov) | https://www.gl-inet.com/en-us/blogs/blog/glinet-security-notice-2026-11-20 |
 | My blog post (full write-up) | https://blog.kltechvideos.co.uk/2026/11/22/gl-inet-security-incident-how-to-check-your-routers-and-kvms-for-malware/ |
 | Router firmware download centre | https://dl.gl-inet.com/ |
 | KVM firmware download centre | https://dl.gl-inet.com/kvm |
 | U-Boot / debrick guide (advanced, see warning below) | https://docs.gl-inet.com/router/en/3/tutorials/debrick/ |
-| 3rd-party malware checker (not endorsed by me or GL.iNet) | https://github.com/admonstrator/glinet-csa-2026-01 |
+| ⭐ Community security check (linked by GL.iNet; independently maintained) | https://gl-i.net/security/csa-2026-01/fix/ |
+| Community check source code | https://github.com/admonstrator/glinet-csa-2026-01 |
+
+---
+
+> 🆕 **Updated 24 Nov 2026:** GL.iNet updated its notice. The quick `ps | grep tmp` check has **limited coverage** (it mainly targets the KVM malware), so **a clean result does not mean a device is clean**. Run the community check below first, then install the security firmware.
+
+## ⭐ Start here: community security check (recommended)
+
+GL.iNet's updated notice links to this independently maintained check. It covers the gl-helper malware, the remote shell, cloud-command traces, running programs, network and firewall changes, replaced tools and autostart entries, and the older backdoor.
+
+> ⏱️ **Run it BEFORE you update, restart or reset.** A restart removes the remote shell, and the new firmware deletes known traces on first boot.
+
+**Check-only mode** 🟢 Read-only on your device (downloads a script). SSH in as root, on a router or KVM:
+
+```sh
+curl -fsSL https://app.gl-i.net/csa-2026-01-fix -o gl-helper-triage.sh ; sh gl-helper-triage.sh
+```
+
+| Verdict | Meaning |
+| --- | --- |
+| **INFECTED** | Malware files, a remote shell, GL.iNet's indicator or the older backdoor is present |
+| **ATTACKED** | A cloud command ran as root but nothing was left behind. Treat the device as hit |
+| **No gl-helper indicators found** | None of the known traces. Not proof nothing happened |
+
+- A flagged item isn't automatically proof of infection. If anything shows up, contact support@gl-inet.com.
+- `--archive` saves evidence to `/tmp` (copy it off before restarting; it can contain Wi-Fi and VPN keys, so never post it). `--fix` removes what it found. Read the [check's page](https://gl-i.net/security/csa-2026-01/fix/) before using either.
+- Not run or endorsed by GL.iNet, and it runs as root, so give it a read first.
 
 ---
 
@@ -32,7 +59,9 @@ One process: **`crond -i /tmp/.log`**
 
 ---
 
-## 📶 GL.iNet router check
+## 📶 GL.iNet's original quick check: routers
+
+> ⚠️ **Limited coverage.** This only looks for one indicator. A clean result does **not** mean the router is clean. Use the community check above as well.
 
 SSH into the router and run one of these.
 
@@ -58,7 +87,9 @@ echo "== $(uci get system.@system[0].hostname 2>/dev/null) =="; ps | grep '[c]ro
 
 ---
 
-## 🖥️ GL.iNet KVM check
+## 🖥️ GL.iNet's original quick check: KVMs
+
+> ⚠️ GL.iNet calls this KVM check **optional, with limited coverage**. A negative result does not rule out compromise. Install the security firmware regardless.
 
 In the KVM web interface: **Toolbox → Terminal → Access**.
 Run these **in the KVM's terminal**, not on the computer it's connected to.
@@ -233,25 +264,48 @@ Create an IP range block rule for:
 ## ✅ The real fix
 
 - **Turn off GoodCloud / KVM cloud access** on any device that doesn't strictly need it. The attack came in through GL.iNet's cloud.
-- **Install the stable security firmware** for your model from the download centres above.
+- **Install the security firmware** for your exact model (see the version table above). The AstroWarp bug applies even with AstroWarp switched off.
 - **Use your own remote access** (WireGuard / Tailscale) instead of vendor cloud management.
 - **Keep KVMs off the internet** and reach them over your VPN.
 
 ---
 
-## ⚠️ If you're infected
+## ⚠️ What to do with your result
 
-- **GL.iNet's official advice:** install the security beta, or factory reset, then install the stable security firmware.
-- If you update instead of resetting, **don't keep settings**. Community analysis found the malware hides in `/etc/config`.
-- **Rotate every secret** the device held: Wi-Fi and admin passwords, VPN / WireGuard keys, DDNS credentials, SSH keys.
-- **KVM users:** also check the connected computer for unknown programs, browser extensions, accounts, startup items or scheduled tasks, then run a full security scan.
-- **Not sure?** Email support@gl-inet.com.
+**Never connected to GoodCloud?** GL.iNet says these devices are **not likely exposed**. Install the security firmware as routine maintenance. No reset or password change needed for the update prompt alone.
+
+**Connected to GoodCloud?** Install the firmware, then change passwords and replace keys anyway, even with a clean check (GL.iNet precaution).
+
+**Known or suspected compromise:**
+
+1. **Contain first.** If access looks ongoing, disconnect the device if safe and contact support@gl-inet.com.
+2. **Reinstall the security firmware with settings OFF** (router: "Keep Settings" off; KVM: clear "Save current configuration" where offered). Set it up again by hand. **Don't restore a backup** from the device. A factory reset alone does **not** install the fixes.
+3. Keeping settings is allowed but gives **less recovery assurance**: in community testing a startup script and SSH key survived a settings-preserving upgrade on a test RM1.
+4. **Rotate credentials** after updating: admin password, VPN / WireGuard / SSH keys, DDNS and cloud passwords, and anything reused elsewhere. Delete VPN profiles at the other end and create new ones.
+5. **KVM users:** check the connected computer for unknown accounts, software, browser extensions, startup items or settings changes, then run a full scan.
+
+### 📦 Minimum security firmware versions
+
+| Type | Models | Minimum version |
+| --- | --- | --- |
+| Router | GL-MG1300, GL-MT3000, GL-MT6000 | 4.11.1 |
+| Router | GL-E5800 | 4.10.3 |
+| Router | GL-BE3600, GL-BE9300 | 4.10.2 |
+| Router | GL-BE14000 | 4.9.3 |
+| Router | GL-BE6500, GL-MT3600BE, GL-MT5000 | 4.9.1 |
+| Router | GL-BE10000 | 4.8.7 |
+| Router | GL-AX1800, GL-AXT1800, GL-SFT1200, GL-X3000, GL-XE3000 | 4.8.4 |
+| Router | GL-MT2500 / MT2500A, GL-X2000 | 4.7.14 |
+| KVM | GL-RM1, RM1V2, RM10, RM10RC, RM1PE, RM4PE | 1.10.3 |
+| KVM | GL-RMQ1 (Comet Q) | 1.8.7 |
+
+Install the latest stable release for **your exact model** only. This table lists models with security firmware, not confirmed compromised models.
 
 > 🛑 **U-Boot reflashing is for advanced users only. You can brick your router or KVM.** Only follow GL.iNet's official guides. I can't assist with this process.
 > https://docs.gl-inet.com/router/en/3/tutorials/debrick/
 
 ---
 
-*Third-party checker: https://github.com/admonstrator/glinet-csa-2026-01. It's community work, not endorsed by me or GL.iNet, and it runs as root, so read it before running it.*
+*Community check: https://gl-i.net/security/csa-2026-01/fix/ (source: https://github.com/admonstrator/glinet-csa-2026-01). Independently maintained, linked by GL.iNet's notice, not run or endorsed by GL.iNet. It runs as root, so read it before running it.*
 
 **KL Tech Videos** · [YouTube](https://www.youtube.com/@kltechvideos) · [Blog](https://blog.kltechvideos.co.uk) · [X](https://x.com/kltechvideos) · [Ko-fi](https://www.ko-fi.com/kltechvideos)
